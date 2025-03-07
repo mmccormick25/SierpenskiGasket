@@ -1,0 +1,154 @@
+<!doctype html>
+<html>
+   <body>
+      <canvas width = "600" height = "600" id = "my_Canvas"></canvas>
+
+      <script>
+
+         // Creating canvas
+         var canvas = document.getElementById('my_Canvas');
+         gl = canvas.getContext('experimental-webgl'); 
+
+
+         // Initial points defining triangle on outside
+         var initialVertices = [-0.8, -0.7, 0.0, 0.8, -0.7, 0.0, 0.0, 0.69, 0.0];
+
+         // =============Buffer===============
+
+         // Creating empty buffer
+         var vertexBuffer = gl.createBuffer();
+         // Binding buffer
+         gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+         // Passing vertex to buffer
+         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(initialVertices), gl.STATIC_DRAW);
+         // Unbinding buffer
+         gl.bindBuffer(gl.ARRAY_BUFFER, null);
+
+         //==============Shaders================
+
+         // Vertex shader source code
+         var vertCode =
+            'attribute vec3 coordinates;' +
+            'void main(void) {' +
+               'gl_Position = vec4(coordinates, 1.0);' +
+               'gl_PointSize = 2.0;'+
+            '}';
+
+         // Creating vert shader
+         var vertShader = gl.createShader(gl.VERTEX_SHADER);
+         // Attatch shader code to shader
+         gl.shaderSource(vertShader, vertCode);
+         // Compiling shader
+         gl.compileShader(vertShader);
+
+         // Fragment shader source code
+         var fragCode =
+            'void main(void) {' +
+               ' gl_FragColor.rgb = vec3(0, 0, 200);' +
+            '}';
+
+         // Creating fragment shader
+         var fragShader = gl.createShader(gl.FRAGMENT_SHADER);
+         // Attach fragment shader code to shader
+         gl.shaderSource(fragShader, fragCode);
+         // Compiling fragmentt shader
+         gl.compileShader(fragShader);
+         
+         // Creating shader program to attach both shaders
+         var shaderProgram = gl.createProgram();
+         // Attaching vertex shader
+         gl.attachShader(shaderProgram, vertShader); 
+         // Attaching fragment shader
+         gl.attachShader(shaderProgram, fragShader);
+         // Linking programs
+         gl.linkProgram(shaderProgram);
+         // Using program
+         gl.useProgram(shaderProgram);
+
+         //======== Attatching shaders to buffer ========
+
+         // Binding vertex buffer
+         gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+         // Getting attribute location
+         var coord = gl.getAttribLocation(shaderProgram, "coordinates");
+         // Pointing attribute to VBO
+         gl.vertexAttribPointer(coord, 3, gl.FLOAT, false, 0, 0);
+         // Enabling attribute
+         gl.enableVertexAttribArray(coord);
+
+         //============= Drawing sierpenski triangle ===============
+
+         // Clearing canvas
+         gl.clearColor(0.2, 0.2, 0.2, 0.9);
+         // Clearing the color buffer bit
+         gl.clear(gl.COLOR_BUFFER_BIT);
+         // Setting the view port
+         gl.viewport(0,0,canvas.width,canvas.height);
+
+         // Drawing triangle of the initial points
+         gl.drawArrays(gl.POINTS, 0, 3);
+
+         // Total number of points that will be drawn inside triangle
+         var numPoints = 5000;
+
+         // Defining initial triangle for picking random point inside
+         var triangleVert1 = [-0.8, -0.7, 0.0];
+         var triangleVert2 = [0.8, -0.7, 0.0];
+         var triangleVert3 = [0.0, 0.69, 0.0];
+
+         // Getting two random numbers between 0 and 21
+         var r1 = Math.random();
+         var r2 = Math.random();
+
+         // Random x coord in triangle
+         var randomXInTriangle = (1 - Math.sqrt(r1)) * triangleVert1[0] + (Math.sqrt(r1) * (1 - r2)) * triangleVert2[0] + (Math.sqrt(r1) * r2) * triangleVert3[0];
+         // Random y coord in triangle
+         var randomYInTriangle = (1 - Math.sqrt(r1)) * triangleVert1[1] + (Math.sqrt(r1) * (1 - r2)) * triangleVert2[1] + (Math.sqrt(r1) * r2) * triangleVert3[1];
+         // Creating random vertex in triangle with coordinates
+         var vertex = [randomXInTriangle, randomYInTriangle, 0.0];
+
+         // Buffering point data
+         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertex), gl.STATIC_DRAW);
+         // Drawing point
+         gl.drawArrays(gl.POINTS, 0, 1);
+
+         // This loop will run each time a point is drawn
+         for (var n = 0; n < numPoints; n++) {
+            // Getting random number 0, 1, or 2 to pick target vertex of triangle
+            var r3 = Math.floor(Math.random() * 3);
+            // Holds target vertex
+            var targetVert;
+            // Assigning target vertex depending on random number chosen
+            switch (r3) {
+               case 0:
+                  targetVert = triangleVert1;
+                  break;
+               case 1:
+                  targetVert = triangleVert2;
+                  break;
+               case 2:
+                  targetVert = triangleVert3;
+                  break;
+            }
+
+            // Calclulating point halfway between initial point and target vertex
+            // Defining slope
+            var slope = (targetVert[1] - vertex[1])/(targetVert[0] - vertex[0]);
+            // Getting x of new point
+            var newX = (targetVert[0] - vertex[0])*0.5 + vertex[0];
+            // Getting y of new point
+            var newY = slope*(newX - vertex[0]) + vertex[1];
+            // Assigning vertex to new point
+            vertex = [newX, newY, 0.0];
+
+            // Buffering point data
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertex), gl.STATIC_DRAW);
+            // Drawing point
+            gl.drawArrays(gl.POINTS, 0, 1);
+         }
+
+         // Unbinding buffer
+         gl.bindBuffer(gl.ARRAY_BUFFER, null);
+      </script>
+   </body>
+</html>
